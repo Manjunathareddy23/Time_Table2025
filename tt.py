@@ -112,9 +112,12 @@ lab_subjects = [subject.strip() for subject in lab_subjects_input.split(',')]
 periods = st.number_input("Enter Number of Periods in a Day (excluding Lunch Break)", min_value=5, max_value=10, value=7)
 period_duration = st.number_input("Enter Duration of Each Period (in minutes)", min_value=30, max_value=120, value=50)
 num_sections = st.number_input("Enter Number of Sections", min_value=1, max_value=10, value=1)
-st.success("Designed by Manjunatha Reddy ")
+
 days_in_week = st.number_input("Enter Number of Days in a Week", min_value=1, max_value=7, value=6)
 start_time = st.time_input("Enter Start Time of First Period", datetime(2023, 1, 1, 9, 30).time())
 
 if st.button('Generate Timetable'):
     generate_timetable(subjects, periods, num_sections, lab_subjects, start_time, days_in_week, period_duration)
+
+
+st.success("Designed by Manjunatha Reddy ")
