@@ -3,24 +3,6 @@ import pandas as pd
 import random
 from datetime import datetime, timedelta
 
-
-# Function to generate timetable
-def generate_timetable(subjects, periods, num_sections, lab_subjects, start_time, days_in_week, period_duration):
-    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][:days_in_week]
-    lab_colors = {"ML LAB": "#000080", "NSC LAB": "#FFC0CB", "WT LAB": "#FFFF00"}  # Navy blue, pink, yellow
-
-    for section in range(1, num_sections + 1):
-        available_subjects = [subject for subject in subjects if subject not in lab_subjects]
-        section_subjects = available_subjects.copy()
-        labs_assigned = {}
-
-        # Timetable dictionary with lunch included after the 4th period
-        time…
-import streamlit as st
-import pandas as pd
-import random
-from datetime import datetime, timedelta
-
 # Apply CSS styling
 st.markdown("""
     <style>
@@ -60,36 +42,32 @@ def generate_timetable(subjects, periods, num_sections, lab_subjects, start_time
     for section in range(1, num_sections + 1):
         available_subjects = [subject for subject in subjects if subject not in lab_subjects]
         section_subjects = available_subjects.copy()
-        labs_assigned = {}
-
+        
         # Timetable dictionary with lunch included after the 4th period
         timetable_dict = {day: [""] * (periods + 1) for day in days}  # +1 for Lunch Break
 
-        # Assign labs to a unique day and ensure they're scheduled before or after lunch
+        # Assign labs to unique days before or after lunch
         random_days = random.sample(days, min(len(lab_subjects), len(days)))
         for lab, day in zip(lab_subjects, random_days):
-            # Possible slots: periods 0-2 (before lunch) or periods 5-7 (after lunch)
             possible_slots = [0, 1]  # Before lunch (Periods 1-3)
-            if periods >= 7:  # Ensure enough periods exist for after-lunch labs
+            if periods >= 7:
                 possible_slots += [5]  # After lunch (Periods 6-8)
-            
             lab_start_period = random.choice(possible_slots)
             timetable_dict[day][lab_start_period:lab_start_period + 3] = [lab] * 3
-            labs_assigned[lab] = day
 
-        # Fill in the timetable with other subjects and insert lunch after 4th period
+        # Fill in timetable with subjects and insert lunch break after 4th period
         for day in days:
             day_schedule = timetable_dict[day]
             i = 0
             while i < len(day_schedule):
                 if i == 4:
-                    day_schedule[i] = "Lunch Break"  # Insert lunch break after 4th period
+                    day_schedule[i] = "Lunch Break"
                     i += 1
                     continue
-                if day_schedule[i] != "":  # Skip periods already filled (labs)
+                if day_schedule[i] != "":
                     i += 1
                     continue
-                if not section_subjects:  # Reset subjects if all are used
+                if not section_subjects:
                     section_subjects = available_subjects.copy()
                 subject = random.choice(section_subjects)
                 section_subjects.remove(subject)
@@ -103,17 +81,17 @@ def generate_timetable(subjects, periods, num_sections, lab_subjects, start_time
         # Apply color formatting
         def highlight_labs(val):
             if val == "Lunch Break":
-                return 'background-color: #D3D3D3; font-weight: bold;'  # Light gray for lunch break
+                return 'background-color: #D3D3D3; font-weight: bold;'
             color = lab_colors.get(val, "")
             return f'background-color: {color}' if color else ""
 
         styled_df = timetable_df.style.applymap(highlight_labs)
 
         st.subheader(f"Generated Timetable for Section {section}")
-        st.dataframe(styled_df)
+        st.write(styled_df)
 
         # CSV download option
-        csv = timetable_df.to_csv()
+        csv = timetable_df.to_csv(index=False)
         st.download_button(
             label=f"Download Section {section} Timetable as CSV",
             data=csv,
