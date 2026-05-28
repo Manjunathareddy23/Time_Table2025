@@ -3,52 +3,80 @@ import pandas as pd
 import random
 from datetime import datetime
 
-# Apply CSS styling
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(
+    page_title="College Timetable Generator",
+    page_icon="📚",
+    layout="wide"
+)
+
+# ---------------- CUSTOM CSS ----------------
 st.markdown("""
 <style>
-    body {
-        background-color: #f0f2f6;
-    }
 
-    .stTextArea, .stNumberInput, .stTimeInput, .stButton {
-        background-color: #ffffff;
-        border: 1px solid #d1d5db;
-        border-radius: 10px;
-        padding: 10px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    }
+body {
+    background-color: #f0f2f6;
+}
 
-    .stButton > button {
-        background-color: #4CAF50;
-        color: white;
-        border-radius: 8px;
-        padding: 10px 20px;
-        border: none;
-        cursor: pointer;
-    }
+.stTextArea, .stNumberInput, .stTimeInput, .stButton {
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
 
-    .stButton > button:hover {
-        background-color: #45a049;
-    }
+.stButton > button {
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 8px;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.stButton > button:hover {
+    background-color: #45a049;
+}
+
+h1 {
+    text-align: center;
+    color: #2E4053;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------- FUNCTION ----------------
+def generate_timetable(
+    subjects,
+    periods,
+    num_sections,
+    lab_subjects,
+    start_time,
+    days_in_week,
+    period_duration
+):
 
-# Function to generate timetable
-def generate_timetable(subjects, periods, num_sections,
-                        lab_subjects, start_time,
-                        days_in_week, period_duration):
+    days = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday'
+    ][:days_in_week]
 
-    days = ['Monday', 'Tuesday', 'Wednesday',
-            'Thursday', 'Friday', 'Saturday',
-            'Sunday'][:days_in_week]
-
+    # Lab colors
     lab_colors = {
-        "ML LAB": "#000080",
+        "ML LAB": "#ADD8E6",
         "NSC LAB": "#FFC0CB",
-        "WT LAB": "#FFFF00"
+        "WT LAB": "#FFFF99"
     }
 
+    # Generate timetable for each section
     for section in range(1, num_sections + 1):
 
         available_subjects = [
@@ -58,13 +86,13 @@ def generate_timetable(subjects, periods, num_sections,
 
         section_subjects = available_subjects.copy()
 
-        # Create empty timetable
+        # Empty timetable dictionary
         timetable_dict = {
             day: [""] * (periods + 1)
             for day in days
         }
 
-        # Assign labs
+        # ---------------- LAB ALLOCATION ----------------
         random_days = random.sample(
             days,
             min(len(lab_subjects), len(days))
@@ -79,25 +107,29 @@ def generate_timetable(subjects, periods, num_sections,
 
             lab_start_period = random.choice(possible_slots)
 
-            timetable_dict[day][
-                lab_start_period:lab_start_period + 3
-            ] = [lab] * 3
+            # Ensure lab fits inside timetable
+            if lab_start_period + 3 <= periods + 1:
 
-        # Fill timetable
+                timetable_dict[day][
+                    lab_start_period:lab_start_period + 3
+                ] = [lab] * 3
+
+        # ---------------- FILL SUBJECTS ----------------
         for day in days:
 
             day_schedule = timetable_dict[day]
+
             i = 0
 
             while i < len(day_schedule):
 
-                # Lunch break
+                # Lunch break after 4th period
                 if i == 4:
                     day_schedule[i] = "Lunch Break"
                     i += 1
                     continue
 
-                # Skip filled slots
+                # Skip already filled cells
                 if day_schedule[i] != "":
                     i += 1
                     continue
@@ -107,48 +139,65 @@ def generate_timetable(subjects, periods, num_sections,
                     section_subjects = available_subjects.copy()
 
                 subject = random.choice(section_subjects)
+
                 section_subjects.remove(subject)
 
                 day_schedule[i] = subject
+
                 i += 1
 
-        # Convert to DataFrame
+        # ---------------- DATAFRAME ----------------
         timetable_df = pd.DataFrame(timetable_dict)
 
         timetable_df.index = [
-            f'Period {i + 1}' if i != 4 else 'Lunch Break'
+            f"Period {i + 1}"
+            if i != 4 else "Lunch Break"
             for i in range(periods + 1)
         ]
 
-        # Highlight labs
+        # ---------------- STYLING FUNCTION ----------------
         def highlight_labs(val):
 
             if val == "Lunch Break":
-                return 'background-color: #D3D3D3; font-weight: bold;'
+                return "background-color: #D3D3D3; font-weight: bold;"
 
             color = lab_colors.get(val, "")
 
-            return f'background-color: {color}' if color else ""
+            if color:
+                return f"background-color: {color}; font-weight: bold;"
 
-        styled_df = timetable_df.style.applymap(highlight_labs)
+            return ""
 
+        # FIXED STYLE ISSUE
+        styled_df = timetable_df.style.apply(
+            lambda col: [highlight_labs(v) for v in col],
+            axis=0
+        )
+
+        # ---------------- DISPLAY ----------------
         st.subheader(f"Generated Timetable for Section {section}")
 
-        st.write(styled_df)
+        st.dataframe(
+            timetable_df,
+            use_container_width=True
+        )
 
-        # Download CSV
-        csv = timetable_df.to_csv(index=False)
+        # ---------------- DOWNLOAD BUTTON ----------------
+        csv = timetable_df.to_csv(index=True)
 
         st.download_button(
-            label=f"Download Section {section} Timetable as CSV",
+            label=f"Download Section {section} Timetable",
             data=csv,
             file_name=f"timetable_section_{section}.csv",
             mime="text/csv"
         )
 
+        st.markdown("---")
 
-# Streamlit Interface
-st.title("College Timetable Generator")
+
+# ---------------- STREAMLIT UI ----------------
+
+st.title("📚 College Timetable Generator")
 
 subjects_input = st.text_area(
     "Enter Subject Names (comma separated)",
@@ -157,7 +206,7 @@ subjects_input = st.text_area(
 
 subjects = [
     subject.strip()
-    for subject in subjects_input.split(',')
+    for subject in subjects_input.split(",")
 ]
 
 lab_subjects_input = st.text_area(
@@ -167,7 +216,7 @@ lab_subjects_input = st.text_area(
 
 lab_subjects = [
     subject.strip()
-    for subject in lab_subjects_input.split(',')
+    for subject in lab_subjects_input.split(",")
 ]
 
 periods = st.number_input(
@@ -205,7 +254,7 @@ start_time = st.time_input(
 
 st.success("Designed by Manjunatha Reddy")
 
-# Generate button
+# ---------------- BUTTON ----------------
 if st.button("Generate Timetable"):
 
     generate_timetable(
@@ -218,4 +267,4 @@ if st.button("Generate Timetable"):
         period_duration
     )
 
-st.success("Designed by Manjunatha Reddy")
+st.success("Timetable Generated Successfully ✅")
